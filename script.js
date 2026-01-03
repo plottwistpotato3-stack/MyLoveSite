@@ -185,33 +185,144 @@ window.addEventListener('load', () => {
     loadMainContent();
 });
 
+// Messages System
+const MESSAGES_KEY = 'romanticMessages';
+
 // DOM Elements (only accessible after auth)
-let uploadArea, photoInput, previewContainer, previewImage, removePhotoBtn;
-let messageInput, saveMessageBtn, clearAllBtn, displaySection;
-let messageCard, cardImage, messageText, timestamp;
+let uploadArea, photoInput, previewContainer;
+let messageInput, saveMessageBtn, clearFormBtn, displaySection, messagesContainer;
 
 // State
-let currentPhoto = null;
+let currentPhotos = [];
+let currentUser = null;
+
+// Get current user
+function getCurrentUser() {
+    const authData = localStorage.getItem(AUTH_KEY);
+    if (authData) {
+        const auth = JSON.parse(authData);
+        return auth.currentUser;
+    }
+    return null;
+}
+
+// Get all messages
+function getMessages() {
+    const messagesData = localStorage.getItem(MESSAGES_KEY);
+    return messagesData ? JSON.parse(messagesData) : [];
+}
+
+// Save messages
+function saveMessages(messages) {
+    localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+}
+
+// Add new message
+function addMessage(message, photos) {
+    const messages = getMessages();
+    const newMessage = {
+        id: Date.now(),
+        author: getCurrentUser(),
+        message: message,
+        photos: photos,
+        timestamp: new Date().toISOString()
+    };
+    messages.unshift(newMessage); // Add to beginning
+    saveMessages(messages);
+    return newMessage;
+}
+
+// Delete message
+function deleteMessage(messageId) {
+    const messages = getMessages();
+    const filtered = messages.filter(m => m.id !== messageId);
+    saveMessages(filtered);
+    renderMessages();
+}
+
+// Format date
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('uk-UA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// Render all messages
+function renderMessages() {
+    const messages = getMessages();
+    messagesContainer.innerHTML = '';
+    
+    if (messages.length === 0) {
+        messagesContainer.innerHTML = '<p class="no-messages">Ще немає повідомлень. Створіть перше! 💕</p>';
+        return;
+    }
+    
+    messages.forEach(message => {
+        const messageCard = createMessageCard(message);
+        messagesContainer.appendChild(messageCard);
+    });
+}
+
+// Create message card element
+function createMessageCard(message) {
+    const card = document.createElement('div');
+    card.className = 'card message-card';
+    card.dataset.messageId = message.id;
+    
+    let photosHTML = '';
+    if (message.photos && message.photos.length > 0) {
+        photosHTML = '<div class="card-photos">';
+        message.photos.forEach(photo => {
+            photosHTML += `<img src="${photo}" alt="Photo" class="card-photo">`;
+        });
+        photosHTML += '</div>';
+    }
+    
+    const deleteBtn = message.author === getCurrentUser() 
+        ? `<button class="delete-btn" onclick="deleteMessage(${message.id})" title="Видалити">🗑️</button>`
+        : '';
+    
+    card.innerHTML = `
+        ${photosHTML}
+        <div class="card-content">
+            <div class="message-header">
+                <span class="message-author">${message.author}</span>
+                ${deleteBtn}
+            </div>
+            <p class="message-text">${message.message || ''}</p>
+            <div class="card-footer">
+                <span class="timestamp">${formatDate(message.timestamp)}</span>
+            </div>
+        </div>
+    `;
+    
+    return card;
+}
 
 // Initialize main content (called after authentication)
 function loadMainContent() {
+    currentUser = getCurrentUser();
+    
     // DOM Elements
     uploadArea = document.getElementById('uploadArea');
     photoInput = document.getElementById('photoInput');
     previewContainer = document.getElementById('previewContainer');
-    previewImage = document.getElementById('previewImage');
-    removePhotoBtn = document.getElementById('removePhoto');
     messageInput = document.getElementById('messageInput');
     saveMessageBtn = document.getElementById('saveMessage');
-    clearAllBtn = document.getElementById('clearAll');
+    clearFormBtn = document.getElementById('clearForm');
     displaySection = document.getElementById('displaySection');
-    messageCard = document.getElementById('messageCard');
-    cardImage = document.getElementById('cardImage');
-    messageText = document.getElementById('messageText');
-    timestamp = document.getElementById('timestamp');
+    messagesContainer = document.getElementById('messagesContainer');
     
     // Initialize event listeners
     initMainContent();
+    
+    // Load and render messages
+    renderMessages();
 }
 
 // Initialize main content event listeners
@@ -239,147 +350,114 @@ function initMainContent() {
         uploadArea.style.borderColor = '#f5576c';
         uploadArea.style.background = 'linear-gradient(135deg, #fff5f5 0%, #ffeef0 100%)';
         
-        const files = e.dataTransfer.files;
-        if (files.length > 0 && files[0].type.startsWith('image/')) {
-            handlePhotoUpload(files[0]);
+        const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+        if (files.length > 0) {
+            handleMultiplePhotos(files);
         }
     });
 
-    // Photo input change handler
+    // Photo input change handler (multiple files)
     photoInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files.length > 0) {
-            handlePhotoUpload(e.target.files[0]);
-        }
-    });
-
-    // Remove photo handler
-    removePhotoBtn.addEventListener('click', () => {
-        currentPhoto = null;
-        previewImage.src = '';
-        previewContainer.style.display = 'none';
-        uploadArea.style.display = 'block';
-        photoInput.value = '';
-        
-        // Hide display section if no message
-        if (!messageInput.value.trim()) {
-            displaySection.style.display = 'none';
+            const files = Array.from(e.target.files);
+            handleMultiplePhotos(files);
         }
     });
 
     // Save message handler
     saveMessageBtn.addEventListener('click', () => {
-    const message = messageInput.value.trim();
-    
-    if (!message && !currentPhoto) {
-        alert('Please add a photo or write a message! 💕');
-        return;
-    }
-    
-    // Update display
-    if (currentPhoto) {
-        cardImage.src = currentPhoto;
-        cardImage.style.display = 'block';
-    } else {
-        cardImage.style.display = 'none';
-        cardImage.src = '';
-    }
-    
-    if (message) {
-        messageText.textContent = message;
-    } else {
-        messageText.textContent = '';
-    }
-    
-    // Update timestamp
-    const now = new Date();
-    const dateOptions = { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    };
-    timestamp.textContent = `Created on ${now.toLocaleDateString('en-US', dateOptions)}`;
-    
-    // Show display section
-    displaySection.style.display = 'block';
-    
-        // Scroll to display section
-        displaySection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
-
-    // Clear all handler
-    clearAllBtn.addEventListener('click', () => {
-        if (confirm('Are you sure you want to clear everything? 💔')) {
-            currentPhoto = null;
-            previewImage.src = '';
-            cardImage.src = '';
-            cardImage.style.display = 'none';
-            previewContainer.style.display = 'none';
-            uploadArea.style.display = 'block';
-            photoInput.value = '';
-            messageInput.value = '';
-            displaySection.style.display = 'none';
-        }
-    });
-
-    // Load saved data from localStorage
-    const savedPhoto = localStorage.getItem('romanticPhoto');
-    const savedMessage = localStorage.getItem('romanticMessage');
-    
-    if (savedPhoto) {
-        currentPhoto = savedPhoto;
-        previewImage.src = savedPhoto;
-        previewContainer.style.display = 'block';
-        uploadArea.style.display = 'none';
-    }
-    
-    if (savedMessage) {
-        messageInput.value = savedMessage;
-    }
-    
-    // Auto-display if both exist
-    if (savedPhoto || savedMessage) {
-        setTimeout(() => {
-            if (saveMessageBtn) saveMessageBtn.click();
-        }, 100);
-    }
-
-    // Auto-save to localStorage
-    messageInput.addEventListener('input', () => {
-        localStorage.setItem('romanticMessage', messageInput.value);
-    });
-
-    // Also save when photo is removed
-    removePhotoBtn.addEventListener('click', () => {
-        localStorage.removeItem('romanticPhoto');
-    });
-}
-
-// Handle photo upload (moved outside to be accessible)
-function handlePhotoUpload(file) {
-    if (!file || !file.type.startsWith('image/')) {
-        alert('Будь ласка, виберіть файл зображення! 📷');
-        return;
-    }
-
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-        currentPhoto = e.target.result;
-        previewImage.src = currentPhoto;
-        previewContainer.style.display = 'block';
-        uploadArea.style.display = 'none';
+        const message = messageInput.value.trim();
         
-        // Save to localStorage
-        localStorage.setItem('romanticPhoto', currentPhoto);
-    };
-    
-    reader.onerror = () => {
-        alert('Помилка при завантаженні фото! Спробуйте інше зображення.');
-    };
-    
-    reader.readAsDataURL(file);
+        if (!message && currentPhotos.length === 0) {
+            alert('Будь ласка, додайте фото або напишіть повідомлення! 💕');
+            return;
+        }
+        
+        // Add message
+        addMessage(message, currentPhotos);
+        
+        // Clear form
+        clearForm();
+        
+        // Re-render messages
+        renderMessages();
+        
+        // Scroll to top
+        messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    // Clear form handler
+    clearFormBtn.addEventListener('click', () => {
+        clearForm();
+    });
 }
+
+// Handle multiple photos upload
+function handleMultiplePhotos(files) {
+    files.forEach(file => {
+        if (!file.type.startsWith('image/')) {
+            return;
+        }
+        
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            currentPhotos.push(e.target.result);
+            renderPhotoPreviews();
+        };
+        
+        reader.onerror = () => {
+            alert('Помилка при завантаженні фото! Спробуйте інше зображення.');
+        };
+        
+        reader.readAsDataURL(file);
+    });
+}
+
+// Render photo previews
+function renderPhotoPreviews() {
+    previewContainer.innerHTML = '';
+    
+    if (currentPhotos.length === 0) {
+        previewContainer.style.display = 'none';
+        return;
+    }
+    
+    previewContainer.style.display = 'block';
+    
+    currentPhotos.forEach((photo, index) => {
+        const photoWrapper = document.createElement('div');
+        photoWrapper.className = 'photo-preview-wrapper';
+        
+        const img = document.createElement('img');
+        img.src = photo;
+        img.className = 'photo-preview';
+        img.alt = 'Preview';
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-photo-btn';
+        removeBtn.innerHTML = '✕';
+        removeBtn.title = 'Видалити фото';
+        removeBtn.onclick = () => {
+            currentPhotos.splice(index, 1);
+            renderPhotoPreviews();
+        };
+        
+        photoWrapper.appendChild(img);
+        photoWrapper.appendChild(removeBtn);
+        previewContainer.appendChild(photoWrapper);
+    });
+}
+
+// Clear form
+function clearForm() {
+    messageInput.value = '';
+    currentPhotos = [];
+    photoInput.value = '';
+    renderPhotoPreviews();
+}
+
+// Make deleteMessage available globally
+window.deleteMessage = deleteMessage;
 
 

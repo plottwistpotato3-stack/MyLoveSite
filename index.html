@@ -73,45 +73,40 @@
         </header>
 
         <div class="content-wrapper">
-            <!-- Photo Upload Section -->
-            <section class="upload-section">
-                <h2>📸 Upload a Photo</h2>
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">📷</div>
-                    <p>Click or drag a photo here</p>
-                    <input type="file" id="photoInput" accept="image/*" hidden>
-                </div>
-                <div class="preview-container" id="previewContainer" style="display: none;">
-                    <img id="previewImage" src="" alt="Preview">
-                    <button class="remove-btn" id="removePhoto">Remove Photo</button>
-                </div>
-            </section>
-
             <!-- Message Section -->
             <section class="message-section">
-                <h2>💌 Write Your Message</h2>
-                <textarea 
-                    id="messageInput" 
-                    placeholder="Write your romantic message here... Pour your heart out 💖"
-                    rows="6"
-                ></textarea>
+                <h2>💌 Create New Message</h2>
+                <div class="form-group">
+                    <label for="messageInput">Your Message</label>
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Write your romantic message here... Pour your heart out 💖"
+                        rows="6"
+                    ></textarea>
+                </div>
+                
+                <!-- Photo Upload Section -->
+                <div class="photo-upload-section">
+                    <h3>📸 Add Photos (you can add multiple)</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📷</div>
+                        <p>Click or drag photos here</p>
+                        <input type="file" id="photoInput" accept="image/*" multiple hidden>
+                    </div>
+                    <div class="preview-container" id="previewContainer"></div>
+                </div>
+                
                 <div class="button-group">
-                    <button class="btn btn-primary" id="saveMessage">Save Message</button>
-                    <button class="btn btn-secondary" id="clearAll">Clear All</button>
+                    <button class="btn btn-primary" id="saveMessage">💕 Post Message</button>
+                    <button class="btn btn-secondary" id="clearForm">Clear Form</button>
                 </div>
             </section>
 
-            <!-- Display Section -->
-            <section class="display-section" id="displaySection" style="display: none;">
-                <h2>✨ Your Creation</h2>
-                <div class="card" id="messageCard">
-                    <img class="card-image" id="cardImage" src="" alt="Romantic photo" style="display: none;">
-                    <div class="card-content">
-                        <p class="message-text" id="messageText"></p>
-                        <div class="card-footer">
-                            <span class="timestamp" id="timestamp"></span>
-                        </div>
-                    </div>
+            <!-- Messages Display Section -->
+            <section class="display-section" id="displaySection">
+                <h2>✨ All Messages</h2>
+                <div class="messages-container" id="messagesContainer">
+                    <!-- Messages will be added here dynamically -->
                 </div>
             </section>
         </div>
