@@ -206,9 +206,16 @@ function getCurrentUser() {
     return null;
 }
 
-// Get all messages from Firebase (with real-time listener)
-function getMessages(callback) {
-    database.ref(MESSAGES_KEY).on('value', (snapshot) => {
+// Real-time listener for messages (set up once)
+let messagesListener = null;
+
+// Set up real-time listener for messages
+function setupMessagesListener() {
+    if (messagesListener) {
+        return; // Already set up
+    }
+    
+    messagesListener = database.ref(MESSAGES_KEY).on('value', (snapshot) => {
         const data = snapshot.val();
         let messages = [];
         
@@ -227,7 +234,36 @@ function getMessages(callback) {
             });
         }
         
+        renderMessagesList(messages);
+    }, (error) => {
+        console.error('Firebase error:', error);
+        alert('Помилка підключення до бази даних. Перевірте консоль браузера.');
+    });
+}
+
+// Get messages once (for immediate use)
+function getMessagesOnce(callback) {
+    database.ref(MESSAGES_KEY).once('value', (snapshot) => {
+        const data = snapshot.val();
+        let messages = [];
+        
+        if (data) {
+            if (Array.isArray(data)) {
+                messages = data;
+            } else {
+                messages = Object.values(data);
+            }
+            messages.sort((a, b) => {
+                const timeA = new Date(a.timestamp || 0).getTime();
+                const timeB = new Date(b.timestamp || 0).getTime();
+                return timeB - timeA;
+            });
+        }
+        
         callback(messages);
+    }, (error) => {
+        console.error('Firebase error:', error);
+        callback([]);
     });
 }
 
@@ -238,7 +274,7 @@ function saveMessages(messages) {
 
 // Add new message to Firebase
 function addMessage(message, photos) {
-    getMessages((currentMessages) => {
+    getMessagesOnce((currentMessages) => {
         const newMessage = {
             id: Date.now(),
             author: getCurrentUser(),
@@ -255,7 +291,7 @@ function addMessage(message, photos) {
 
 // Delete message from Firebase
 function deleteMessage(messageId) {
-    getMessages((messages) => {
+    getMessagesOnce((messages) => {
         const filtered = messages.filter(m => m.id !== messageId);
         saveMessages(filtered);
     });
@@ -273,20 +309,27 @@ function formatDate(dateString) {
     });
 }
 
-// Render all messages (with Firebase real-time updates)
+// Render messages list (called by real-time listener)
+function renderMessagesList(messages) {
+    if (!messagesContainer) return;
+    
+    messagesContainer.innerHTML = '';
+    
+    if (messages.length === 0) {
+        messagesContainer.innerHTML = '<p class="no-messages">Ще немає повідомлень. Створіть перше! 💕</p>';
+        return;
+    }
+    
+    messages.forEach(message => {
+        const messageCard = createMessageCard(message);
+        messagesContainer.appendChild(messageCard);
+    });
+}
+
+// Initial render (for compatibility)
 function renderMessages() {
-    getMessages((messages) => {
-        messagesContainer.innerHTML = '';
-        
-        if (messages.length === 0) {
-            messagesContainer.innerHTML = '<p class="no-messages">Ще немає повідомлень. Створіть перше! 💕</p>';
-            return;
-        }
-        
-        messages.forEach(message => {
-            const messageCard = createMessageCard(message);
-            messagesContainer.appendChild(messageCard);
-        });
+    getMessagesOnce((messages) => {
+        renderMessagesList(messages);
     });
 }
 
@@ -343,7 +386,10 @@ function loadMainContent() {
     // Initialize event listeners
     initMainContent();
     
-    // Load and render messages
+    // Set up real-time listener for messages
+    setupMessagesListener();
+    
+    // Initial render
     renderMessages();
 }
 
@@ -401,11 +447,10 @@ function initMainContent() {
         // Clear form
         clearForm();
         
-        // Re-render messages
-        renderMessages();
-        
-        // Scroll to top
-        messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Scroll to top (messages will update automatically via real-time listener)
+        setTimeout(() => {
+            messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 500);
     });
 
     // Clear form handler
