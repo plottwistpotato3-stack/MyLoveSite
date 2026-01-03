@@ -1,8 +1,9 @@
-// Authentication System
+// Authentication System with Firebase
 const AUTH_KEY = 'romanticAuth';
+const USERS_KEY = 'users';
 const MAX_USERS = 2;
 
-// Check if user is logged in
+// Check if user is logged in (session stored in localStorage)
 function checkAuth() {
     const authData = localStorage.getItem(AUTH_KEY);
     if (authData) {
@@ -28,74 +29,99 @@ function showMainContent() {
     document.getElementById('mainContainer').style.display = 'block';
 }
 
-// Get registered users
-function getUsers() {
-    const authData = localStorage.getItem(AUTH_KEY);
-    if (authData) {
-        const auth = JSON.parse(authData);
-        return auth.users || [];
-    }
-    return [];
+// Get registered users from Firebase
+function getUsers(callback) {
+    database.ref(USERS_KEY).once('value', (snapshot) => {
+        const data = snapshot.val();
+        const users = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+        callback(users);
+    }, (error) => {
+        console.error('Error getting users:', error);
+        callback([]);
+    });
 }
 
-// Save users
+// Save users to Firebase
 function saveUsers(users) {
-    const authData = localStorage.getItem(AUTH_KEY);
-    let auth = authData ? JSON.parse(authData) : { users: [], isLoggedIn: false, currentUser: null };
-    auth.users = users;
-    localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
+    database.ref(USERS_KEY).set(users);
 }
 
 // Login function
-function login(username, password) {
-    const users = getUsers();
-    const user = users.find(u => u.username === username && u.password === password);
-    
-    if (user) {
-        const authData = localStorage.getItem(AUTH_KEY);
-        let auth = authData ? JSON.parse(authData) : { users: [], isLoggedIn: false, currentUser: null };
-        auth.isLoggedIn = true;
-        auth.currentUser = username;
-        localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
-        showMainContent();
-        return true;
-    }
-    return false;
+function login(username, password, callback) {
+    getUsers((users) => {
+        // Check if user exists in the registered users list
+        const user = users.find(u => u.username === username && u.password === password);
+        
+        if (user) {
+            // Save session in localStorage (for current browser session)
+            const auth = {
+                isLoggedIn: true,
+                currentUser: username
+            };
+            localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
+            showMainContent();
+            if (callback) callback(true);
+            return true;
+        } else {
+            // User not found or wrong password
+            if (callback) callback(false);
+            return false;
+        }
+    });
 }
 
 // Register function
-function register(username, password) {
-    const users = getUsers();
-    
-    // Check if username already exists
-    if (users.find(u => u.username === username)) {
-        return { success: false, message: 'Username already exists!' };
-    }
-    
-    // Check if max users reached
-    if (users.length >= MAX_USERS) {
-        return { success: false, message: `Maximum ${MAX_USERS} users allowed (you and your girlfriend)!` };
-    }
-    
-    // Add new user
-    users.push({ username, password });
-    saveUsers(users);
-    
-    // Auto login after registration
-    login(username, password);
-    
-    return { success: true, message: 'Registration successful!' };
+function register(username, password, callback) {
+    getUsers((users) => {
+        // Check if max users reached FIRST (before checking username)
+        if (users.length >= MAX_USERS) {
+            if (callback) callback({ 
+                success: false, 
+                message: `❌ Maximum ${MAX_USERS} users allowed! Only you and your girlfriend can register.` 
+            });
+            return;
+        }
+        
+        // Check if username already exists
+        if (users.find(u => u.username === username)) {
+            if (callback) callback({ 
+                success: false, 
+                message: '❌ Username already exists! Please choose another username.' 
+            });
+            return;
+        }
+        
+        // Validate username
+        if (!username || username.length < 2) {
+            if (callback) callback({ 
+                success: false, 
+                message: '❌ Username must be at least 2 characters!' 
+            });
+            return;
+        }
+        
+        // Add new user
+        users.push({ username, password });
+        saveUsers(users);
+        
+        // Auto login after registration
+        login(username, password, (success) => {
+            if (success && callback) {
+                callback({ success: true, message: '✅ Registration successful! Welcome! 💕' });
+            } else {
+                if (callback) callback({ success: false, message: 'Registration failed. Please try again.' });
+            }
+        });
+    });
 }
 
 // Logout function
 function logout() {
-    const authData = localStorage.getItem(AUTH_KEY);
-    if (authData) {
-        const auth = JSON.parse(authData);
-        auth.isLoggedIn = false;
-        auth.currentUser = null;
-        localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
-    }
+    const auth = {
+        isLoggedIn: false,
+        currentUser: null
+    };
+    localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
     showAuthForm();
 }
 
@@ -133,12 +159,16 @@ loginForm.addEventListener('submit', (e) => {
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
     
-    if (login(username, password)) {
-        loginError.textContent = '';
-        loginForm.reset();
-    } else {
-        loginError.textContent = 'Invalid username or password!';
-    }
+    loginError.textContent = 'Loading...';
+    
+    login(username, password, (success) => {
+        if (success) {
+            loginError.textContent = '';
+            loginForm.reset();
+        } else {
+            loginError.textContent = '❌ Invalid username or password! Only registered users can login.';
+        }
+    });
 });
 
 // Register form submit
@@ -160,13 +190,16 @@ registerForm.addEventListener('submit', (e) => {
         return;
     }
     
-    const result = register(username, password);
-    if (result.success) {
-        registerError.textContent = '';
-        registerForm.reset();
-    } else {
-        registerError.textContent = result.message;
-    }
+    registerError.textContent = 'Loading...';
+    
+    register(username, password, (result) => {
+        if (result.success) {
+            registerError.textContent = '';
+            registerForm.reset();
+        } else {
+            registerError.textContent = result.message;
+        }
+    });
 });
 
 // Logout button
