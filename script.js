@@ -277,10 +277,11 @@ function initMainContent() {
     
     // Update display
     if (currentPhoto) {
-        cardImage.style.backgroundImage = `url(${currentPhoto})`;
+        cardImage.src = currentPhoto;
         cardImage.style.display = 'block';
     } else {
         cardImage.style.display = 'none';
+        cardImage.src = '';
     }
     
     if (message) {
@@ -312,6 +313,8 @@ function initMainContent() {
         if (confirm('Are you sure you want to clear everything? 💔')) {
             currentPhoto = null;
             previewImage.src = '';
+            cardImage.src = '';
+            cardImage.style.display = 'none';
             previewContainer.style.display = 'none';
             uploadArea.style.display = 'block';
             photoInput.value = '';

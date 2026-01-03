@@ -292,12 +292,11 @@ h2 {
 
 .card-image {
     width: 100%;
-    min-height: 300px;
     height: auto;
-    max-height: 500px;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    min-height: 300px;
+    max-height: 600px;
+    object-fit: cover;
+    display: block;
     flex-shrink: 0;
 }
 
@@ -510,7 +509,7 @@ h2 {
 
     /* Mobile fixes for card */
     .card-image {
-        min-height: 250px;
+        min-height: 200px;
         max-height: 400px;
     }
 
@@ -546,8 +545,8 @@ h2 {
     }
 
     .card-image {
-        min-height: 200px;
-        max-height: 350px;
+        min-height: 150px;
+        max-height: 300px;
     }
 
     .card-content {
