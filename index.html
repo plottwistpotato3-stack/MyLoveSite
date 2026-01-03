@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Romantic Message</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Animated Background Lions with Hearts -->
+    <div class="animated-background">
+        <div class="lion-heart lion1">🦁💕</div>
+        <div class="lion-heart lion2">🦁💖</div>
+        <div class="lion-heart lion3">🦁💗</div>
+        <div class="lion-heart lion4">🦁❤️</div>
+        <div class="lion-heart lion5">🦁💕</div>
+        <div class="lion-heart lion6">🦁💖</div>
+    </div>
+    
+    <!-- Login/Register Form -->
+    <div class="auth-container" id="authContainer">
+        <div class="auth-box">
+            <h1>💕 Our Secret Place 💕</h1>
+            <p class="auth-subtitle">Only for us two 💑</p>
+            
+            <div class="auth-tabs">
+                <button class="tab-btn active" id="loginTab">Login</button>
+                <button class="tab-btn" id="registerTab">Register</button>
+            </div>
+
+            <!-- Login Form -->
+            <form class="auth-form active" id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">Username</label>
+                    <input type="text" id="loginUsername" required placeholder="Enter your username">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required placeholder="Enter your password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Login 💖</button>
+                <p class="error-message" id="loginError"></p>
+            </form>
+
+            <!-- Register Form -->
+            <form class="auth-form" id="registerForm">
+                <div class="form-group">
+                    <label for="registerUsername">Username</label>
+                    <input type="text" id="registerUsername" required placeholder="Choose a username">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" required placeholder="Choose a password" minlength="4">
+                </div>
+                <div class="form-group">
+                    <label for="registerPasswordConfirm">Confirm Password</label>
+                    <input type="password" id="registerPasswordConfirm" required placeholder="Confirm password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Register 💕</button>
+                <p class="error-message" id="registerError"></p>
+                <p class="info-message">Maximum 2 users can register (you and your girlfriend)</p>
+            </form>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer" style="display: none;">
+        <header>
+            <div class="header-top">
+                <h1>💕 My Romantic Message 💕</h1>
+                <button class="logout-btn" id="logoutBtn">Logout</button>
+            </div>
+            <p class="subtitle">Share your love through photos and messages</p>
+        </header>
+
+        <div class="content-wrapper">
+            <!-- Photo Upload Section -->
+            <section class="upload-section">
+                <h2>📸 Upload a Photo</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📷</div>
+                    <p>Click or drag a photo here</p>
+                    <input type="file" id="photoInput" accept="image/*" hidden>
+                </div>
+                <div class="preview-container" id="previewContainer" style="display: none;">
+                    <img id="previewImage" src="" alt="Preview">
+                    <button class="remove-btn" id="removePhoto">Remove Photo</button>
+                </div>
+            </section>
+
+            <!-- Message Section -->
+            <section class="message-section">
+                <h2>💌 Write Your Message</h2>
+                <textarea 
+                    id="messageInput" 
+                    placeholder="Write your romantic message here... Pour your heart out 💖"
+                    rows="6"
+                ></textarea>
+                <div class="button-group">
+                    <button class="btn btn-primary" id="saveMessage">Save Message</button>
+                    <button class="btn btn-secondary" id="clearAll">Clear All</button>
+                </div>
+            </section>
+
+            <!-- Display Section -->
+            <section class="display-section" id="displaySection" style="display: none;">
+                <h2>✨ Your Creation</h2>
+                <div class="card" id="messageCard">
+                    <div class="card-image" id="cardImage"></div>
+                    <div class="card-content">
+                        <p class="message-text" id="messageText"></p>
+                        <div class="card-footer">
+                            <span class="timestamp" id="timestamp"></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+
