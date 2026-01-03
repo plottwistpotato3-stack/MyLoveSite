@@ -247,24 +247,10 @@ function initMainContent() {
 
     // Photo input change handler
     photoInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
+        if (e.target.files && e.target.files.length > 0) {
             handlePhotoUpload(e.target.files[0]);
         }
     });
-
-// Handle photo upload
-function handlePhotoUpload(file) {
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-        currentPhoto = e.target.result;
-        previewImage.src = currentPhoto;
-        previewContainer.style.display = 'block';
-        uploadArea.style.display = 'none';
-    };
-    
-    reader.readAsDataURL(file);
-}
 
     // Remove photo handler
     removePhotoBtn.addEventListener('click', () => {
@@ -361,21 +347,36 @@ function handlePhotoUpload(file) {
         localStorage.setItem('romanticMessage', messageInput.value);
     });
 
-    // Save photo to localStorage when uploaded
-    photoInput.addEventListener('change', () => {
-        if (photoInput.files.length > 0) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                localStorage.setItem('romanticPhoto', e.target.result);
-            };
-            reader.readAsDataURL(photoInput.files[0]);
-        }
-    });
-
     // Also save when photo is removed
     removePhotoBtn.addEventListener('click', () => {
         localStorage.removeItem('romanticPhoto');
     });
+}
+
+// Handle photo upload (moved outside to be accessible)
+function handlePhotoUpload(file) {
+    if (!file || !file.type.startsWith('image/')) {
+        alert('Будь ласка, виберіть файл зображення! 📷');
+        return;
+    }
+
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+        currentPhoto = e.target.result;
+        previewImage.src = currentPhoto;
+        previewContainer.style.display = 'block';
+        uploadArea.style.display = 'none';
+        
+        // Save to localStorage
+        localStorage.setItem('romanticPhoto', currentPhoto);
+    };
+    
+    reader.onerror = () => {
+        alert('Помилка при завантаженні фото! Спробуйте інше зображення.');
+    };
+    
+    reader.readAsDataURL(file);
 }
 
 
