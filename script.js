@@ -33,17 +33,35 @@ function showMainContent() {
 function getUsers(callback) {
     database.ref(USERS_KEY).once('value', (snapshot) => {
         const data = snapshot.val();
-        const users = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+        let users = [];
+        
+        if (data) {
+            if (Array.isArray(data)) {
+                users = data;
+            } else if (typeof data === 'object') {
+                users = Object.values(data);
+            }
+        }
+        
+        console.log('Users from Firebase:', users);
         callback(users);
     }, (error) => {
         console.error('Error getting users:', error);
+        alert('Помилка підключення до бази даних. Перевірте правила доступу в Firebase.');
         callback([]);
     });
 }
 
 // Save users to Firebase
 function saveUsers(users) {
-    database.ref(USERS_KEY).set(users);
+    database.ref(USERS_KEY).set(users, (error) => {
+        if (error) {
+            console.error('Error saving users:', error);
+            alert('Помилка збереження користувачів. Перевірте правила доступу в Firebase.');
+        } else {
+            console.log('Users saved successfully:', users);
+        }
+    });
 }
 
 // Login function
@@ -60,6 +78,10 @@ function login(username, password, callback) {
             };
             localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
             showMainContent();
+            
+            // Load main content (setup listeners and render messages)
+            loadMainContent();
+            
             if (callback) callback(true);
             return true;
         } else {
@@ -209,8 +231,41 @@ logoutBtn.addEventListener('click', () => {
     }
 });
 
+// Migrate users from localStorage to Firebase (one-time migration)
+function migrateUsersToFirebase() {
+    const authData = localStorage.getItem(AUTH_KEY);
+    if (!authData) return;
+    
+    try {
+        const auth = JSON.parse(authData);
+        const oldUsers = auth.users || [];
+        
+        if (oldUsers.length > 0) {
+            // Check if Firebase already has users
+            getUsers((firebaseUsers) => {
+                if (firebaseUsers.length === 0 && oldUsers.length > 0) {
+                    // Migrate users to Firebase
+                    console.log('Migrating users to Firebase...');
+                    saveUsers(oldUsers);
+                    
+                    // Clear old users from localStorage (keep session)
+                    auth.users = [];
+                    localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
+                    
+                    console.log('Migration complete!');
+                }
+            });
+        }
+    } catch (e) {
+        console.error('Migration error:', e);
+    }
+}
+
 // Check authentication on page load
 window.addEventListener('load', () => {
+    // Try to migrate users from localStorage to Firebase
+    migrateUsersToFirebase();
+    
     if (!checkAuth()) {
         return; // Don't load main content if not authenticated
     }
