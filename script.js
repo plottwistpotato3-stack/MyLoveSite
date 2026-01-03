@@ -206,38 +206,59 @@ function getCurrentUser() {
     return null;
 }
 
-// Get all messages
-function getMessages() {
-    const messagesData = localStorage.getItem(MESSAGES_KEY);
-    return messagesData ? JSON.parse(messagesData) : [];
+// Get all messages from Firebase (with real-time listener)
+function getMessages(callback) {
+    database.ref(MESSAGES_KEY).on('value', (snapshot) => {
+        const data = snapshot.val();
+        let messages = [];
+        
+        if (data) {
+            // Convert object to array if needed
+            if (Array.isArray(data)) {
+                messages = data;
+            } else {
+                messages = Object.values(data);
+            }
+            // Sort by timestamp (newest first)
+            messages.sort((a, b) => {
+                const timeA = new Date(a.timestamp || 0).getTime();
+                const timeB = new Date(b.timestamp || 0).getTime();
+                return timeB - timeA;
+            });
+        }
+        
+        callback(messages);
+    });
 }
 
-// Save messages
+// Save messages to Firebase
 function saveMessages(messages) {
-    localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+    database.ref(MESSAGES_KEY).set(messages);
 }
 
-// Add new message
+// Add new message to Firebase
 function addMessage(message, photos) {
-    const messages = getMessages();
-    const newMessage = {
-        id: Date.now(),
-        author: getCurrentUser(),
-        message: message,
-        photos: photos,
-        timestamp: new Date().toISOString()
-    };
-    messages.unshift(newMessage); // Add to beginning
-    saveMessages(messages);
-    return newMessage;
+    getMessages((currentMessages) => {
+        const newMessage = {
+            id: Date.now(),
+            author: getCurrentUser(),
+            message: message,
+            photos: photos || [],
+            timestamp: new Date().toISOString()
+        };
+        
+        // Add to beginning
+        const updatedMessages = [newMessage, ...currentMessages];
+        saveMessages(updatedMessages);
+    });
 }
 
-// Delete message
+// Delete message from Firebase
 function deleteMessage(messageId) {
-    const messages = getMessages();
-    const filtered = messages.filter(m => m.id !== messageId);
-    saveMessages(filtered);
-    renderMessages();
+    getMessages((messages) => {
+        const filtered = messages.filter(m => m.id !== messageId);
+        saveMessages(filtered);
+    });
 }
 
 // Format date
@@ -252,19 +273,20 @@ function formatDate(dateString) {
     });
 }
 
-// Render all messages
+// Render all messages (with Firebase real-time updates)
 function renderMessages() {
-    const messages = getMessages();
-    messagesContainer.innerHTML = '';
-    
-    if (messages.length === 0) {
-        messagesContainer.innerHTML = '<p class="no-messages">Ще немає повідомлень. Створіть перше! 💕</p>';
-        return;
-    }
-    
-    messages.forEach(message => {
-        const messageCard = createMessageCard(message);
-        messagesContainer.appendChild(messageCard);
+    getMessages((messages) => {
+        messagesContainer.innerHTML = '';
+        
+        if (messages.length === 0) {
+            messagesContainer.innerHTML = '<p class="no-messages">Ще немає повідомлень. Створіть перше! 💕</p>';
+            return;
+        }
+        
+        messages.forEach(message => {
+            const messageCard = createMessageCard(message);
+            messagesContainer.appendChild(messageCard);
+        });
     });
 }
 
